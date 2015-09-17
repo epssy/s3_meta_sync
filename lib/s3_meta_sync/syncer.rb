@@ -61,7 +61,12 @@ module S3MetaSync
     end
 
     def download(source, destination)
-      remote_meta = download_meta(source)
+      remote_meta = begin
+        download_meta(source)
+      rescue RemoteWithoutMeta
+        log "Remote has no .s3-meta-sync, nothing to do", true
+        exit(1) # what's the best way to throw fatal here?
+      end
       local_files = ((@config[:no_local_changes] && read_meta(destination)) || meta_data(destination))[:files]
 
       download = remote_meta[:files].select { |path, md5| local_files[path] != md5 }.map(&:first)
